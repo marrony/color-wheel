@@ -3,6 +3,8 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var camera = CameraSession()
     @State private var sampled: HSB?
+    @State private var wheel: WheelModel = .artist
+    @State private var slices: SliceCount = .twelve
 
     /// Centered 10% × 10% region — matches the on-screen reticle.
     private let sampleRegion = CGRect(x: 0.45, y: 0.45, width: 0.10, height: 0.10)
@@ -11,10 +13,10 @@ struct ContentView: View {
         VStack(spacing: 0) {
             previewSection
                 .frame(maxWidth: .infinity)
-                .aspectRatio(3.0 / 4.0, contentMode: .fit)
+                .aspectRatio(4.0 / 3.0, contentMode: .fit)
                 .background(Color.black)
 
-            SuggestionsPanel(sampled: sampled)
+            SuggestionsPanel(sampled: sampled, wheel: $wheel, slices: $slices)
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(Color(.systemBackground))

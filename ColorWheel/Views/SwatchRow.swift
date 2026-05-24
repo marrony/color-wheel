@@ -23,16 +23,16 @@ struct Swatch: View {
     let hsb: HSB
 
     var body: some View {
-        VStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+        VStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(hsb.color)
-                .frame(width: 56, height: 56)
+                .frame(width: 80, height: 80)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(.black.opacity(0.08), lineWidth: 1)
                 )
             Text(hsb.hexString)
-                .font(.system(.caption, design: .monospaced))
+                .font(.system(.footnote, design: .monospaced).weight(.medium))
                 .foregroundStyle(.primary)
         }
     }

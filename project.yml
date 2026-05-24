@@ -1,6 +1,6 @@
 name: ColorWheel
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: neris.marrony
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -20,7 +20,7 @@ targets:
       - path: ColorWheel
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ColorWheel
+        PRODUCT_BUNDLE_IDENTIFIER: neris.marrony.ColorWheel
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: ColorWheel/Info.plist
@@ -35,5 +35,5 @@ targets:
       - target: ColorWheel
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ColorWheelTests
+        PRODUCT_BUNDLE_IDENTIFIER: neris.marrony.ColorWheelTests
         GENERATE_INFOPLIST_FILE: YES
