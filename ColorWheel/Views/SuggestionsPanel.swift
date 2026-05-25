@@ -32,16 +32,16 @@ struct SuggestionsPanel: View {
             }
 
             SwatchRow(
-                title: "Analogous",
-                colors: harmonies?.analogous ?? [],
-                placeholderCount: 2
+                title: "Complementary",
+                colors: harmonies?.complementary ?? [],
+                placeholderCount: 1
             )
             .frame(maxHeight: .infinity)
 
             SwatchRow(
-                title: "Complementary",
-                colors: harmonies?.complementary ?? [],
-                placeholderCount: 1
+                title: "Analogous",
+                colors: harmonies?.analogous ?? [],
+                placeholderCount: 2
             )
             .frame(maxHeight: .infinity)
 
@@ -86,6 +86,16 @@ struct SuggestionsPanel: View {
 
     @ViewBuilder
     private var sourceContent: some View {
+        HStack(spacing: 12) {
+            sourceCell
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private var sourceCell: some View {
         if let sampled {
             let displayed = HarmonyEngine.harmonies(
                 for: sampled, model: wheel, slices: slices.value
@@ -99,12 +109,10 @@ struct SuggestionsPanel: View {
                             .stroke(.black.opacity(0.08), lineWidth: 1)
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                HStack(spacing: 8) {
-                    Text(HarmonyEngine.approximateName(for: displayed))
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                }
+                Text(HarmonyEngine.approximateName(for: displayed))
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
         } else {
             VStack(spacing: 6) {
@@ -116,16 +124,9 @@ struct SuggestionsPanel: View {
                             .foregroundStyle(.secondary)
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                HStack(spacing: 8) {
-                    Text("No sample yet")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text("· tap to pick manually")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                    Spacer()
-                }
+                Text("Tap to pick")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
         }
     }
