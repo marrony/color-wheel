@@ -82,14 +82,21 @@ enum HarmonyEngine {
     /// Returns nil for any other slicing scheme.
     static func sliceName(for source: HSB, model: WheelModel, slices: Int?) -> String? {
         guard model == .artist, slices == 12 else { return nil }
-        let artistHue = HueMapper.rgbToArtist(source.hue)
-        let idx = Int(((artistHue / 30).rounded())) % 12
+        return approximateName(for: source)
+    }
+
+    /// Map any color to one of the 12 names on the Itten artist wheel by
+    /// snapping its hue to the nearest 30° slice. The wheel/slice settings
+    /// don't matter — this is purely for display.
+    static func approximateName(for source: HSB) -> String {
         let names = [
             "Red", "Red-Orange", "Orange", "Yellow-Orange",
             "Yellow", "Yellow-Green", "Green", "Blue-Green",
             "Blue", "Blue-Violet", "Violet", "Red-Violet",
         ]
-        return names[(idx + 12) % 12]
+        let artistHue = HueMapper.rgbToArtist(source.hue)
+        let idx = Int((artistHue / 30).rounded())
+        return names[((idx % 12) + 12) % 12]
     }
 
     private static func snapHue(_ hue: Double, sliceSize: Double) -> Double {

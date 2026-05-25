@@ -25,44 +25,39 @@ struct SuggestionsPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             sourceRow
+                .frame(maxHeight: .infinity)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Picker("Color wheel", selection: $wheel) {
-                    ForEach(WheelModel.allCases) { model in
-                        Text(model.displayName).tag(model)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                HStack {
-                    Text("Slices")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Picker("Slices", selection: $slices) {
-                        ForEach(SliceCount.allCases) { count in
-                            Text(count.displayName).tag(count)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
+            let harmonies = sampled.map {
+                HarmonyEngine.harmonies(for: $0, model: wheel, slices: slices.value)
             }
 
-            if let sampled {
-                let harmonies = HarmonyEngine.harmonies(
-                    for: sampled, model: wheel, slices: slices.value
-                )
-                SwatchRow(title: "Analogous", colors: harmonies.analogous)
-                SwatchRow(title: "Complementary", colors: harmonies.complementary)
-                SwatchRow(title: "Triadic", colors: harmonies.triadic)
-            } else {
-                Text("Tap the preview to sample a color.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
+            SwatchRow(
+                title: "Analogous",
+                colors: harmonies?.analogous ?? [],
+                placeholderCount: 2
+            )
+            .frame(maxHeight: .infinity)
+
+            SwatchRow(
+                title: "Complementary",
+                colors: harmonies?.complementary ?? [],
+                placeholderCount: 1
+            )
+            .frame(maxHeight: .infinity)
+
+            SwatchRow(
+                title: "Triadic",
+                colors: harmonies?.triadic ?? [],
+                placeholderCount: 2
+            )
+            .frame(maxHeight: .infinity)
         }
         .sheet(isPresented: $isEditing) {
-            ColorEditorView(initial: sampled ?? .white) { edited in
+            ColorEditorView(
+                initial: sampled ?? .white,
+                wheel: wheel,
+                slices: slices
+            ) { edited in
                 sampled = edited
             }
         }
@@ -70,79 +65,67 @@ struct SuggestionsPanel: View {
 
     @ViewBuilder
     private var sourceRow: some View {
-        HStack(spacing: 12) {
-            if let sampled {
-                let displayed = HarmonyEngine.harmonies(
-                    for: sampled, model: wheel, slices: slices.value
-                ).source
-                let name = HarmonyEngine.sliceName(for: sampled, model: wheel, slices: slices.value)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("Detected")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "slider.horizontal.3")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
 
-                Button {
-                    isEditing = true
-                } label: {
-                    HStack(spacing: 12) {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(displayed.color)
-                            .frame(width: 52, height: 52)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .stroke(.black.opacity(0.08), lineWidth: 1)
-                            )
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) {
-                                Text("Detected")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Image(systemName: "slider.horizontal.3")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            HStack(spacing: 8) {
-                                Text(displayed.hexString)
-                                    .font(.system(.body, design: .monospaced).weight(.semibold))
-                                if let name {
-                                    Text(name)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            if slices != .off && displayed.hexString != sampled.hexString {
-                                Text("raw \(sampled.hexString)")
-                                    .font(.caption2.monospaced())
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        Spacer()
-                    }
-                    .contentShape(Rectangle())
+            Button {
+                isEditing = true
+            } label: {
+                sourceContent
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private var sourceContent: some View {
+        if let sampled {
+            let displayed = HarmonyEngine.harmonies(
+                for: sampled, model: wheel, slices: slices.value
+            ).source
+
+            VStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(displayed.color)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(.black.opacity(0.08), lineWidth: 1)
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                HStack(spacing: 8) {
+                    Text(HarmonyEngine.approximateName(for: displayed))
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
                 }
-                .buttonStyle(.plain)
-            } else {
-                Button {
-                    isEditing = true
-                } label: {
-                    HStack(spacing: 12) {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(width: 52, height: 52)
-                            .overlay(
-                                Image(systemName: "plus")
-                                    .font(.title3)
-                                    .foregroundStyle(.secondary)
-                            )
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("No sample yet")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text("Tap to pick manually")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        Spacer()
-                    }
-                    .contentShape(Rectangle())
+            }
+        } else {
+            VStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.gray.opacity(0.2))
+                    .overlay(
+                        Image(systemName: "plus")
+                            .font(.title)
+                            .foregroundStyle(.secondary)
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                HStack(spacing: 8) {
+                    Text("No sample yet")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("· tap to pick manually")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
                 }
-                .buttonStyle(.plain)
             }
         }
     }

@@ -1,31 +1,56 @@
 import SwiftUI
 
-/// A 2D hue × saturation color picker.
+/// Optional harmony swatches drawn as markers on top of the wheel.
+struct HarmonyOverlay: Equatable {
+    let analogous: [HSB]
+    let complementary: [HSB]
+    let triadic: [HSB]
+}
+
+/// A 2D hue × saturation color picker rendered in the **selected wheel's**
+/// coordinate space.
 ///
-/// Angle around the wheel encodes hue (red at the top, going clockwise) and
-/// distance from the center encodes saturation. The wheel's visible colors
-/// are rendered at the current `saturation` and `brightness` so adjusting
-/// those sliders is reflected across the whole wheel. Dragging anywhere on
-/// the wheel updates hue (from angle) and saturation (from distance).
+/// On the digital RGB wheel the angle around the circle equals RGB hue.
+/// On the artist's RYB wheel the angle equals artist hue, so harmony
+/// relationships (analogous, complementary, triadic) appear as the expected
+/// geometric relationships on the visible wheel.
+///
+/// `hue` and `saturation` are bound to the model in RGB-hue space (the
+/// canonical HSV representation); this view handles the transform to the
+/// chosen wheel internally.
+///
+/// When `harmonies` is non-nil, harmony swatches are drawn as small filled
+/// markers connected to the source by lines (solid = analogous,
+/// dashed = complementary, dotted = triadic).
 struct ColorWheelView: View {
-    @Binding var hue: Double         // 0..<360
+    @Binding var hue: Double         // 0..<360 in RGB-hue space
     @Binding var saturation: Double  // 0...1
     var brightness: Double           // 0...1
+    var wheel: WheelModel = .digital
+    var harmonies: HarmonyOverlay? = nil
 
     var body: some View {
         GeometryReader { proxy in
             let side = min(proxy.size.width, proxy.size.height)
-            wheel(side: side)
+            wheelView(side: side)
                 .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
         .aspectRatio(1, contentMode: .fit)
     }
 
-    private func wheel(side: CGFloat) -> some View {
+    private func wheelView(side: CGFloat) -> some View {
         let radius = side / 2
+        let sourcePoint = point(forRgbHue: hue, saturation: saturation, radius: radius)
+
         return ZStack {
             background
-            marker(radius: radius)
+
+            if let harmonies {
+                harmonyLines(harmonies, source: sourcePoint, radius: radius)
+                harmonyMarkers(harmonies, radius: radius)
+            }
+
+            sourceMarker(at: sourcePoint)
         }
         .frame(width: side, height: side)
         .contentShape(Circle())
@@ -37,10 +62,14 @@ struct ColorWheelView: View {
         )
     }
 
-    /// Angular gradient of hues at the *current* saturation and brightness.
+    /// Angular gradient covering one full wheel-degree turn.
+    /// At wheel-angle θ the visible color is the RGB color whose hue maps
+    /// to θ on the chosen wheel, rendered at the current sat × brightness.
     private var background: some View {
-        let stops = stride(from: 0.0, through: 360.0, by: 15.0).map { h in
-            Color(hue: h / 360, saturation: saturation, brightness: brightness)
+        let stops = stride(from: 0.0, through: 360.0, by: 15.0).map { theta in
+            Color(hue: rgbHue(forWheelAngle: theta) / 360,
+                  saturation: saturation,
+                  brightness: brightness)
         }
         return AngularGradient(
             gradient: Gradient(colors: stops),
@@ -50,18 +79,96 @@ struct ColorWheelView: View {
         .mask(Circle())
     }
 
-    /// Marker at angle = hue and distance from center = saturation × radius.
-    private func marker(radius: CGFloat) -> some View {
-        let angle = (hue - 90) * .pi / 180
-        let r = saturation * radius
-        let x = radius + CGFloat(cos(angle)) * r
-        let y = radius + CGFloat(sin(angle)) * r
-        return Circle()
+    private func sourceMarker(at point: CGPoint) -> some View {
+        Circle()
             .strokeBorder(.white, lineWidth: 3)
             .frame(width: 22, height: 22)
             .shadow(color: .black.opacity(0.5), radius: 2)
-            .position(x: x, y: y)
+            .position(point)
             .allowsHitTesting(false)
+    }
+
+    private func harmonyMarkers(_ harmonies: HarmonyOverlay, radius: CGFloat) -> some View {
+        let all = harmonies.analogous + harmonies.complementary + harmonies.triadic
+        return ZStack {
+            ForEach(all.indices, id: \.self) { i in
+                let hsb = all[i]
+                Circle()
+                    .fill(hsb.color)
+                    .frame(width: 14, height: 14)
+                    .overlay(Circle().strokeBorder(.white, lineWidth: 2))
+                    .shadow(color: .black.opacity(0.4), radius: 1)
+                    .position(point(forRgbHue: hsb.hue, saturation: hsb.saturation, radius: radius))
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private func harmonyLines(
+        _ harmonies: HarmonyOverlay,
+        source: CGPoint,
+        radius: CGFloat
+    ) -> some View {
+        Canvas { context, _ in
+            let lineColor = GraphicsContext.Shading.color(.white.opacity(0.75))
+
+            for hsb in harmonies.analogous {
+                var path = Path()
+                path.move(to: source)
+                path.addLine(to: point(forRgbHue: hsb.hue, saturation: hsb.saturation, radius: radius))
+                context.stroke(path, with: lineColor, lineWidth: 1.5)
+            }
+
+            for hsb in harmonies.complementary {
+                var path = Path()
+                path.move(to: source)
+                path.addLine(to: point(forRgbHue: hsb.hue, saturation: hsb.saturation, radius: radius))
+                context.stroke(
+                    path, with: lineColor,
+                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [5, 4])
+                )
+            }
+
+            if !harmonies.triadic.isEmpty {
+                var path = Path()
+                path.move(to: source)
+                for hsb in harmonies.triadic {
+                    path.addLine(to: point(forRgbHue: hsb.hue, saturation: hsb.saturation, radius: radius))
+                }
+                path.addLine(to: source)
+                context.stroke(
+                    path, with: lineColor,
+                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [1, 4])
+                )
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Coordinate transforms
+
+    /// RGB hue → angular position on the chosen wheel.
+    private func wheelAngle(forRgbHue rgbHue: Double) -> Double {
+        switch wheel {
+        case .digital: return rgbHue
+        case .artist:  return HueMapper.rgbToArtist(rgbHue)
+        }
+    }
+
+    /// Angular position on the chosen wheel → RGB hue.
+    private func rgbHue(forWheelAngle angle: Double) -> Double {
+        switch wheel {
+        case .digital: return angle
+        case .artist:  return HueMapper.artistToRgb(angle)
+        }
+    }
+
+    private func point(forRgbHue rgbHue: Double, saturation: Double, radius: CGFloat) -> CGPoint {
+        let theta = wheelAngle(forRgbHue: rgbHue)
+        let angle = (theta - 90) * .pi / 180  // 0° at top, clockwise
+        let r = CGFloat(saturation) * radius
+        return CGPoint(x: radius + CGFloat(cos(angle)) * r,
+                       y: radius + CGFloat(sin(angle)) * r)
     }
 
     private func update(from point: CGPoint, radius: CGFloat) {
@@ -71,8 +178,8 @@ struct ColorWheelView: View {
         saturation = min(1, max(0, Double(dist / radius)))
 
         let angleDeg = atan2(Double(dy), Double(dx)) * 180 / .pi + 90
-        var newHue = angleDeg.truncatingRemainder(dividingBy: 360)
-        if newHue < 0 { newHue += 360 }
-        hue = newHue
+        var wheelAngle = angleDeg.truncatingRemainder(dividingBy: 360)
+        if wheelAngle < 0 { wheelAngle += 360 }
+        hue = rgbHue(forWheelAngle: wheelAngle)
     }
 }

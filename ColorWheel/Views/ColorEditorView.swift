@@ -1,16 +1,28 @@
 import SwiftUI
 
+/// Line styles used in the wheel-overlay legend.
+fileprivate enum LegendLineStyle { case solid, dashed, dotted }
+
 /// Modal for tweaking a sampled color. Edits a working copy; commits to the
 /// caller via `onCommit` only when the user taps Done.
 struct ColorEditorView: View {
     let initial: HSB
+    let wheel: WheelModel
+    let slices: SliceCount
     let onCommit: (HSB) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var working: HSB
 
-    init(initial: HSB, onCommit: @escaping (HSB) -> Void) {
+    init(
+        initial: HSB,
+        wheel: WheelModel,
+        slices: SliceCount,
+        onCommit: @escaping (HSB) -> Void
+    ) {
         self.initial = initial
+        self.wheel = wheel
+        self.slices = slices
         self.onCommit = onCommit
         self._working = State(initialValue: initial)
     }
@@ -21,9 +33,13 @@ struct ColorEditorView: View {
                 ColorWheelView(
                     hue: $working.hue,
                     saturation: $working.saturation,
-                    brightness: working.brightness
+                    brightness: working.brightness,
+                    wheel: wheel,
+                    harmonies: harmonyOverlay
                 )
                 .frame(width: 260, height: 260)
+
+                legend
 
                 preview
 
@@ -51,6 +67,33 @@ struct ColorEditorView: View {
         }
     }
 
+    private var harmonyOverlay: HarmonyOverlay {
+        let h = HarmonyEngine.harmonies(for: working, model: wheel, slices: slices.value)
+        return HarmonyOverlay(
+            analogous: h.analogous,
+            complementary: h.complementary,
+            triadic: h.triadic
+        )
+    }
+
+    private var legend: some View {
+        HStack(spacing: 16) {
+            legendItem(label: "Analogous", style: .solid)
+            legendItem(label: "Complementary", style: .dashed)
+            legendItem(label: "Triadic", style: .dotted)
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+    }
+
+    private func legendItem(label: String, style: LegendLineStyle) -> some View {
+        HStack(spacing: 6) {
+            LegendSwatch(style: style)
+                .frame(width: 22, height: 8)
+            Text(label)
+        }
+    }
+
     private var preview: some View {
         VStack(spacing: 6) {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -65,10 +108,29 @@ struct ColorEditorView: View {
         }
     }
 
+    /// Hue slider binding in the *visible wheel's* coordinate space, so the
+    /// slider value matches the marker's angular position.
+    private var hueBinding: Binding<Double> {
+        Binding(
+            get: {
+                switch wheel {
+                case .digital: return working.hue
+                case .artist:  return HueMapper.rgbToArtist(working.hue)
+                }
+            },
+            set: { newDisplay in
+                switch wheel {
+                case .digital: working.hue = newDisplay
+                case .artist:  working.hue = HueMapper.artistToRgb(newDisplay)
+                }
+            }
+        )
+    }
+
     private var sliders: some View {
         VStack(spacing: 14) {
             sliderRow(title: "Hue",
-                      value: $working.hue,
+                      value: hueBinding,
                       range: 0...360,
                       format: { String(format: "%.0f°", $0) })
             sliderRow(title: "Saturation",
@@ -99,6 +161,28 @@ struct ColorEditorView: View {
                     .foregroundStyle(.secondary)
             }
             Slider(value: value, in: range)
+        }
+    }
+}
+
+/// Tiny line preview used in the legend so users can match a line style to
+/// its harmony type.
+private struct LegendSwatch: View {
+    let style: LegendLineStyle
+
+    var body: some View {
+        Canvas { context, size in
+            let y = size.height / 2
+            var path = Path()
+            path.move(to: CGPoint(x: 0, y: y))
+            path.addLine(to: CGPoint(x: size.width, y: y))
+            let stroke: StrokeStyle
+            switch style {
+            case .solid:  stroke = StrokeStyle(lineWidth: 1.5, lineCap: .round)
+            case .dashed: stroke = StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [5, 4])
+            case .dotted: stroke = StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [1, 4])
+            }
+            context.stroke(path, with: .color(.secondary), style: stroke)
         }
     }
 }

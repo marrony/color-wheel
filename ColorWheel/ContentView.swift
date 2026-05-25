@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var sampled: HSB?
     @State private var wheel: WheelModel = .artist
-    @State private var slices: SliceCount = .twelve
+    @State private var slices: SliceCount = .off
     @State private var isCameraPresented = false
 
     var body: some View {
