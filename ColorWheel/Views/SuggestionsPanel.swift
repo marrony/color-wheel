@@ -16,9 +16,11 @@ enum SliceCount: Int, Hashable, Identifiable, CaseIterable {
 }
 
 struct SuggestionsPanel: View {
-    let sampled: HSB?
+    @Binding var sampled: HSB?
     @Binding var wheel: WheelModel
     @Binding var slices: SliceCount
+
+    @State private var isEditing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -59,6 +61,11 @@ struct SuggestionsPanel: View {
             }
             Spacer(minLength: 0)
         }
+        .sheet(isPresented: $isEditing) {
+            ColorEditorView(initial: sampled ?? .white) { edited in
+                sampled = edited
+            }
+        }
     }
 
     @ViewBuilder
@@ -70,41 +77,73 @@ struct SuggestionsPanel: View {
                 ).source
                 let name = HarmonyEngine.sliceName(for: sampled, model: wheel, slices: slices.value)
 
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(displayed.color)
-                    .frame(width: 52, height: 52)
-                    .overlay(
+                Button {
+                    isEditing = true
+                } label: {
+                    HStack(spacing: 12) {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(.black.opacity(0.08), lineWidth: 1)
-                    )
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Detected")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack(spacing: 8) {
-                        Text(displayed.hexString)
-                            .font(.system(.body, design: .monospaced).weight(.semibold))
-                        if let name {
-                            Text(name)
+                            .fill(displayed.color)
+                            .frame(width: 52, height: 52)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(.black.opacity(0.08), lineWidth: 1)
+                            )
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text("Detected")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            HStack(spacing: 8) {
+                                Text(displayed.hexString)
+                                    .font(.system(.body, design: .monospaced).weight(.semibold))
+                                if let name {
+                                    Text(name)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            if slices != .off && displayed.hexString != sampled.hexString {
+                                Text("raw \(sampled.hexString)")
+                                    .font(.caption2.monospaced())
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    isEditing = true
+                } label: {
+                    HStack(spacing: 12) {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(width: 52, height: 52)
+                            .overlay(
+                                Image(systemName: "plus")
+                                    .font(.title3)
+                                    .foregroundStyle(.secondary)
+                            )
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("No sample yet")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                            Text("Tap to pick manually")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                         }
+                        Spacer()
                     }
-                    if slices != .off && displayed.hexString != sampled.hexString {
-                        Text("raw \(sampled.hexString)")
-                            .font(.caption2.monospaced())
-                            .foregroundStyle(.tertiary)
-                    }
+                    .contentShape(Rectangle())
                 }
-            } else {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(width: 52, height: 52)
-                Text("No sample yet")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
             }
-            Spacer()
         }
     }
 }

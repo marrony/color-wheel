@@ -8,7 +8,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SuggestionsPanel(sampled: sampled, wheel: $wheel, slices: $slices)
+            SuggestionsPanel(sampled: $sampled, wheel: $wheel, slices: $slices)
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 

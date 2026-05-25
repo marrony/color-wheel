@@ -12,6 +12,8 @@ struct HSB: Equatable {
         if newHue < 0 { newHue += 360 }
         return HSB(hue: newHue, saturation: saturation, brightness: brightness)
     }
+
+    static let white = HSB(hue: 0, saturation: 0, brightness: 1)
 }
 
 struct Harmonies: Equatable {
