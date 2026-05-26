@@ -21,7 +21,14 @@ struct ContentView: View {
         .background(Color(.systemBackground))
         .fullScreenCover(isPresented: $isCameraPresented) {
             CameraCaptureView { color in
-                sampled = color
+                // Snap the captured color onto the current wheel + slice
+                // settings before storing it. With Slices = Off this is a
+                // no-op (returns the raw color).
+                sampled = HarmonyEngine.snapped(
+                    color,
+                    model: settings.wheel,
+                    slices: settings.slices.value
+                )
             }
         }
     }

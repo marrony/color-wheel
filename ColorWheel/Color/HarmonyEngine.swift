@@ -63,7 +63,7 @@ enum HarmonyEngine {
 
     /// Snap `source`'s hue onto the nearest slice center on the chosen wheel.
     /// No-op when `slices` is nil or < 2.
-    private static func snapped(_ source: HSB, model: WheelModel, slices: Int?) -> HSB {
+    static func snapped(_ source: HSB, model: WheelModel, slices: Int?) -> HSB {
         guard let slices, slices >= 2 else { return source }
         let sliceSize = 360.0 / Double(slices)
         switch model {
