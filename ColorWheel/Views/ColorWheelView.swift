@@ -236,6 +236,18 @@ struct ColorWheelView: View {
         let angleDeg = atan2(Double(dy), Double(dx)) * 180 / .pi + 90
         var wheelAngle = angleDeg.truncatingRemainder(dividingBy: 360)
         if wheelAngle < 0 { wheelAngle += 360 }
+        if let n = slices, n >= 2 {
+            wheelAngle = snap(wheelAngle, slices: n)
+        }
         hue = rgbHue(forWheelAngle: wheelAngle)
+    }
+
+    /// Snap an angle (in wheel-degrees, 0..<360) to the nearest slice center.
+    private func snap(_ angle: Double, slices n: Int) -> Double {
+        let sliceSize = 360.0 / Double(n)
+        var snapped = (angle / sliceSize).rounded() * sliceSize
+        snapped = snapped.truncatingRemainder(dividingBy: 360)
+        if snapped < 0 { snapped += 360 }
+        return snapped
     }
 }

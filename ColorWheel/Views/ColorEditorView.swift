@@ -110,7 +110,9 @@ struct ColorEditorView: View {
     }
 
     /// Hue slider binding in the *visible wheel's* coordinate space, so the
-    /// slider value matches the marker's angular position.
+    /// slider value matches the marker's angular position. When the user has
+    /// enabled quantization, the slider also snaps to the nearest slice
+    /// center so the marker moves in steps instead of smoothly.
     private var hueBinding: Binding<Double> {
         Binding(
             get: {
@@ -120,9 +122,16 @@ struct ColorEditorView: View {
                 }
             },
             set: { newDisplay in
+                var snapped = newDisplay
+                if let n = slices.value, n >= 2 {
+                    let sliceSize = 360.0 / Double(n)
+                    snapped = (snapped / sliceSize).rounded() * sliceSize
+                    snapped = snapped.truncatingRemainder(dividingBy: 360)
+                    if snapped < 0 { snapped += 360 }
+                }
                 switch wheel {
-                case .digital: working.hue = newDisplay
-                case .artist:  working.hue = HueMapper.artistToRgb(newDisplay)
+                case .digital: working.hue = snapped
+                case .artist:  working.hue = HueMapper.artistToRgb(snapped)
                 }
             }
         )
