@@ -25,6 +25,7 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: ColorWheel/Info.plist
         ENABLE_PREVIEWS: YES
+        CODE_SIGN_ENTITLEMENTS: ColorWheel/ColorWheel.entitlements
 
   ColorWheelTests:
     type: bundle.unit-test

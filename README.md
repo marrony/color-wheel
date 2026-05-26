@@ -71,7 +71,9 @@ The test target unit-tests the pure logic modules — `HarmonyEngineTests`,
 ColorWheel/
 ├── ColorWheelApp.swift             # @main
 ├── ContentView.swift               # screen composition
+├── SettingsKeys.swift              # UserDefaults key constants
 ├── Info.plist                      # NSCameraUsageDescription, etc.
+├── Settings.bundle/Root.plist      # iOS Settings.app entries
 ├── Camera/
 │   ├── CameraSession.swift         # AVCaptureSession + delegate
 │   ├── CameraPreviewView.swift     # UIViewRepresentable preview
@@ -128,9 +130,9 @@ color behaves perceptually. For clothing/fabric matching, the artist's
 wheel is what every fashion and interior-design guide uses, and what
 people intuitively expect ("yellow goes with purple").
 
-The default is `WheelModel.artist`. The toggle for switching between the
-two is currently hidden in the UI — the state still exists, so it can be
-re-exposed without engine changes.
+The default is `WheelModel.artist`. The toggle is no longer rendered in
+the app UI; instead it's exposed in **iOS Settings → ColorWheel** as a
+multi-value picker (see "Settings.bundle" below).
 
 #### The mapping: `HueMapper`
 
@@ -189,11 +191,15 @@ optionally snaps the source hue onto the nearest slice center on the
 active wheel before rotating, so the suggestions feel like reading off a
 physical wheel. Choices: Off / 6 / 12 / 24.
 
-Currently the default is **Off** and the slice picker is hidden, because
-the source-color snapping was confusing in early testing (the displayed
-swatch was sometimes noticeably different from the captured one). The
-plumbing is in place — `SliceCount` state lives in `ContentView` — so
-the picker can be brought back without engine changes.
+Currently the default is **Off** and the picker isn't in the app UI,
+because the source-color snapping was confusing in early testing (the
+displayed swatch was sometimes noticeably different from the captured
+one). It's exposed in **iOS Settings → ColorWheel** as Off / 6 / 12 /
+24, so users who want it can opt in.
+
+When slicing is on, the wheel inside the color editor is also drawn as
+N solid pie wedges with sharp boundaries (instead of a smooth gradient),
+matching the look of a printed sliced color wheel.
 
 ### Itten names instead of hex codes in the main panel
 
@@ -234,6 +240,45 @@ in **wheel-degree space** so it matches the marker's visible angle.
 When no color has been sampled, the empty "Detected" cell is still
 tappable and seeds the editor with `HSB.white` — useful for designing a
 palette without a camera or for testing in the simulator.
+
+### Settings.bundle backed by an App Group
+
+The two harmony settings — color wheel model and slice count — live in
+`ColorWheel/Settings.bundle/Root.plist` and surface in **iOS Settings →
+ColorWheel**.
+
+Both sides share a single `UserDefaults` suite via an **App Group**
+(`group.neris.marrony.ColorWheel`):
+
+- `Settings.bundle/Root.plist` declares the group via
+  `ApplicationGroupContainerIdentifier`, so Settings.app writes its
+  selections into the group's suite.
+- `SettingsStore` reads from the same suite with
+  `UserDefaults(suiteName: SettingsStore.appGroup)` and re-reads on
+  `didBecomeActive` / `willEnterForeground` / `UserDefaults.didChangeNotification`.
+
+```
+UserDefaults keys (see ColorWheel/SettingsKeys.swift)
+  wheel_model  String  "artist" (default) | "digital"
+  slice_count  Int     0 (default, Off) | 6 | 12 | 24
+```
+
+If you rename a key, change both `SettingsKeys.swift` and `Root.plist`.
+
+#### Why an App Group instead of the app's standard defaults?
+
+Without the group, Xcode's dev-signing reinstalls (`⌘R` with a Personal
+Team) move the per-install sandbox container, but Settings.app keeps
+writing to the original container. The two ends silently diverge:
+Settings.app appears to commit a new value, the running app keeps
+reading the stale value, and the only fix is a full delete-and-reinstall.
+Routing both sides through an App Group eliminates that drift.
+
+The group capability is declared in `ColorWheel/ColorWheel.entitlements`
+and wired via `CODE_SIGN_ENTITLEMENTS` in `project.yml`. After
+`xcodegen generate`, verify in Xcode → ColorWheel target → Signing &
+Capabilities that **App Groups** is present and `group.neris.marrony.ColorWheel`
+is checked.
 
 ## Spec
 

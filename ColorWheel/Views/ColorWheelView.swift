@@ -27,6 +27,9 @@ struct ColorWheelView: View {
     @Binding var saturation: Double  // 0...1
     var brightness: Double           // 0...1
     var wheel: WheelModel = .digital
+    /// When non-nil and ≥ 2, the wheel is drawn as `slices` solid pie wedges
+    /// instead of a smooth gradient — mimicking a printed sliced color wheel.
+    var slices: Int? = nil
     var harmonies: HarmonyOverlay? = nil
 
     var body: some View {
@@ -62,10 +65,19 @@ struct ColorWheelView: View {
         )
     }
 
-    /// Angular gradient covering one full wheel-degree turn.
+    @ViewBuilder
+    private var background: some View {
+        if let n = slices, n >= 2 {
+            slicedBackground(slices: n)
+        } else {
+            gradientBackground
+        }
+    }
+
+    /// Smooth angular gradient covering one full wheel-degree turn.
     /// At wheel-angle θ the visible color is the RGB color whose hue maps
     /// to θ on the chosen wheel, rendered at the current sat × brightness.
-    private var background: some View {
+    private var gradientBackground: some View {
         let stops = stride(from: 0.0, through: 360.0, by: 15.0).map { theta in
             Color(hue: rgbHue(forWheelAngle: theta) / 360,
                   saturation: saturation,
@@ -76,6 +88,50 @@ struct ColorWheelView: View {
             center: .center,
             angle: .degrees(-90)
         )
+        .mask(Circle())
+    }
+
+    /// Render the wheel as `n` equal pie wedges with sharp boundaries.
+    /// Each wedge is filled with the color at its center hue, so slice 0 is
+    /// centered at the top (wheel-angle 0) and matches the slices that
+    /// `HarmonyEngine` snaps onto.
+    private func slicedBackground(slices n: Int) -> some View {
+        // Local copies so the Canvas closure doesn't capture self.
+        let s = saturation
+        let b = brightness
+        let m = wheel
+        return Canvas { context, size in
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let radius = min(size.width, size.height) / 2
+            let sliceSize = 360.0 / Double(n)
+
+            for i in 0..<n {
+                // Slice i is centered on wheel-angle i*sliceSize and spans
+                // half a slice on each side.
+                let startWheel = Double(i) * sliceSize - sliceSize / 2
+                let endWheel = startWheel + sliceSize
+
+                var path = Path()
+                path.move(to: center)
+                path.addArc(
+                    center: center,
+                    radius: radius,
+                    startAngle: .degrees(startWheel - 90),  // wheel 0° → screen up
+                    endAngle: .degrees(endWheel - 90),
+                    clockwise: false
+                )
+                path.closeSubpath()
+
+                let centerWheel = Double(i) * sliceSize
+                let rgb: Double
+                switch m {
+                case .digital: rgb = centerWheel
+                case .artist:  rgb = HueMapper.artistToRgb(centerWheel)
+                }
+                let color = Color(hue: rgb / 360, saturation: s, brightness: b)
+                context.fill(path, with: .color(color))
+            }
+        }
         .mask(Circle())
     }
 

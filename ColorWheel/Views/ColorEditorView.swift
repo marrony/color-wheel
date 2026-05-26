@@ -35,6 +35,7 @@ struct ColorEditorView: View {
                     saturation: $working.saturation,
                     brightness: working.brightness,
                     wheel: wheel,
+                    slices: slices.value,
                     harmonies: harmonyOverlay
                 )
                 .frame(width: 260, height: 260)

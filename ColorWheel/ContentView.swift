@@ -2,15 +2,18 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var sampled: HSB?
-    @State private var wheel: WheelModel = .artist
-    @State private var slices: SliceCount = .off
     @State private var isCameraPresented = false
+    @StateObject private var settings = SettingsStore()
 
     var body: some View {
         VStack(spacing: 0) {
-            SuggestionsPanel(sampled: $sampled, wheel: $wheel, slices: $slices)
-                .padding()
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            SuggestionsPanel(
+                sampled: $sampled,
+                wheel: .constant(settings.wheel),
+                slices: .constant(settings.slices)
+            )
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             captureButton
                 .padding()
