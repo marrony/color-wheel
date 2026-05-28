@@ -54,7 +54,7 @@ struct SuggestionsPanel: View {
         }
         .sheet(isPresented: $isEditing) {
             ColorEditorView(
-                initial: sampled ?? .white,
+                initial: sampled ?? .red,
                 wheel: wheel,
                 slices: slices
             ) { edited in

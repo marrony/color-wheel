@@ -13,7 +13,7 @@ struct HSB: Equatable {
         return HSB(hue: newHue, saturation: saturation, brightness: brightness)
     }
 
-    static let white = HSB(hue: 0, saturation: 0, brightness: 1)
+    static let red = HSB(hue: 0, saturation: 1, brightness: 1)
 }
 
 struct Harmonies: Equatable {
