@@ -20,6 +20,9 @@ struct SuggestionsPanel: View {
     @Binding var wheel: WheelModel
     @Binding var slices: SliceCount
 
+    // isEditing: Bool — the value (the wrapped form)
+    // $isEditing: Binding<Bool> — a binding to it
+    // _isEditing: State<Bool> — the wrapper
     @State private var isEditing = false
 
     var body: some View {
