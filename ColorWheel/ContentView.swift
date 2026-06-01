@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var sampled: HSB?
+    @State private var saved: SavedState = .load()
     @State private var isCameraPresented = false
     @StateObject private var settings = SettingsStore()
 
     var body: some View {
         VStack(spacing: 0) {
             SuggestionsPanel(
-                sampled: $sampled,
+                sampled: $saved.sample,
                 wheel: .constant(settings.wheel),
                 slices: .constant(settings.slices)
             )
@@ -24,12 +24,15 @@ struct ContentView: View {
                 // Snap the captured color onto the current wheel + slice
                 // settings before storing it. With Slices = Off this is a
                 // no-op (returns the raw color).
-                sampled = HarmonyEngine.snapped(
+                saved.sample = HarmonyEngine.snapped(
                     color,
                     model: settings.wheel,
                     slices: settings.slices.value
                 )
             }
+        }
+        .onChange(of: saved) { _, newValue in
+            newValue.save()
         }
     }
 

@@ -7,4 +7,5 @@ import Foundation
 enum SettingsKeys {
     static let wheelModel = "wheel_model"   // String: "artist" | "digital"
     static let sliceCount = "slice_count"   // Int: 0 | 6 | 12 | 24
+    static let savedState = "saved_state"   // Data: JSON-encoded SavedState
 }

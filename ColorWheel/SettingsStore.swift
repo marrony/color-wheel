@@ -15,7 +15,7 @@ import UIKit
 @MainActor
 final class SettingsStore: ObservableObject {
     /// The App Group both `Settings.bundle` and the running app share.
-    static let appGroup = "group.neris.marrony.ColorWheel"
+    nonisolated static let appGroup = "group.neris.marrony.ColorWheel"
 
     @Published private(set) var wheel: WheelModel
     @Published private(set) var slices: SliceCount

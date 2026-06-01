@@ -2,7 +2,7 @@ import Foundation
 
 /// Hue-Saturation-Brightness color value.
 /// `hue` is stored in degrees `0..<360`; `saturation` and `brightness` are `0...1`.
-struct HSB: Equatable {
+struct HSB: Equatable, Codable {
     var hue: Double
     var saturation: Double
     var brightness: Double
