@@ -2,6 +2,13 @@ import AVFoundation
 import CoreVideo
 import Foundation
 
+// AVFoundation hasn't been audited for Swift 6 Sendable yet, but
+// `AVCaptureSession` is reference-counted and documented as safe for the
+// operations we use (`startRunning` / `stopRunning` from a background queue,
+// configuration from a single owner). The `@unchecked` form lets us send the
+// session into detached tasks without crossing an actor boundary.
+extension AVCaptureSession: @retroactive @unchecked Sendable {}
+
 @MainActor
 final class CameraSession: NSObject, ObservableObject {
     enum State {
@@ -16,10 +23,14 @@ final class CameraSession: NSObject, ObservableObject {
     @Published private(set) var state: State = .idle
 
     private let videoOutput = AVCaptureVideoDataOutput()
-    private let sampleQueue = DispatchQueue(label: "color-wheel.sample-buffer")
+    nonisolated private let sampleQueue = DispatchQueue(label: "color-wheel.sample-buffer")
 
-    /// Most recent frame. Replaced as new frames arrive.
-    private var latestBuffer: CVPixelBuffer?
+    /// Most recent frame. Touched by both the background sample-buffer
+    /// delegate and the main thread; the lock serialises access. We use
+    /// `nonisolated(unsafe)` plus an explicit `NSLock` instead of crossing an
+    /// actor boundary because `CVPixelBuffer` isn't `Sendable`.
+    nonisolated private let bufferLock = NSLock()
+    nonisolated(unsafe) private var _latestBuffer: CVPixelBuffer?
 
     func start() async {
         guard state == .idle else { return }
@@ -47,9 +58,10 @@ final class CameraSession: NSObject, ObservableObject {
         Task.detached { session.stopRunning() }
     }
 
-    /// Snapshot the latest pixel buffer for sampling.
-    func snapshotLatestBuffer() -> CVPixelBuffer? {
-        latestBuffer
+    /// Snapshot the latest pixel buffer for sampling. Safe to call from any
+    /// context; the lock serialises against the capture-output delegate.
+    nonisolated func snapshotLatestBuffer() -> CVPixelBuffer? {
+        bufferLock.withLock { _latestBuffer }
     }
 
     // MARK: - Private
@@ -94,7 +106,7 @@ final class CameraSession: NSObject, ObservableObject {
            connection.isVideoRotationAngleSupported(90) {
             connection.videoRotationAngle = 90
         }
-        
+
         return true
     }
 }
@@ -104,8 +116,6 @@ extension CameraSession: AVCaptureVideoDataOutputSampleBufferDelegate {
                                    didOutput sampleBuffer: CMSampleBuffer,
                                    from connection: AVCaptureConnection) {
         guard let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        Task { @MainActor in
-            self.latestBuffer = buffer
-        }
+        bufferLock.withLock { _latestBuffer = buffer }
     }
 }
