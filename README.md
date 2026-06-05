@@ -71,9 +71,13 @@ The test target unit-tests the pure logic modules — `HarmonyEngineTests`,
 ColorWheel/
 ├── ColorWheelApp.swift             # @main
 ├── ContentView.swift               # screen composition
+├── SavedState.swift                # persisted app state
 ├── SettingsKeys.swift              # UserDefaults key constants
+├── SettingsStore.swift             # Settings.app ↔ app sync
 ├── Info.plist                      # NSCameraUsageDescription, etc.
 ├── Settings.bundle/Root.plist      # iOS Settings.app entries
+├── Assets.xcassets/                # app icons & colors
+│   └── AppIcon.appiconset/
 ├── Camera/
 │   ├── CameraSession.swift         # AVCaptureSession + delegate
 │   ├── CameraPreviewView.swift     # UIViewRepresentable preview
@@ -93,6 +97,8 @@ ColorWheelTests/
 ├── HarmonyEngineTests.swift
 ├── HueMapperTests.swift
 └── ColorSamplerTests.swift
+project.yml                         # XcodeGen project config
+scripts/generate_icon.swift         # icon generation script
 ```
 
 ## Design decisions
