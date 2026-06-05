@@ -47,13 +47,21 @@ final class SettingsStore: ObservableObject {
         self.wheel = initialWheel
         self.slices = initialSlices
 
+        // These notifications can be posted on background threads (e.g.
+        // UserDefaults.didChangeNotification from another process, or XCTest's
+        // own registerDefaults during a test-host launch). `reload()` is
+        // @MainActor-isolated, and Swift 6's runtime isolation check traps if
+        // the sink fires off-main — so hop to the main queue first.
         notificationCenter.publisher(for: UIApplication.didBecomeActiveNotification)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.reload() }
             .store(in: &bag)
         notificationCenter.publisher(for: UIApplication.willEnterForegroundNotification)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.reload() }
             .store(in: &bag)
         notificationCenter.publisher(for: UserDefaults.didChangeNotification)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.reload() }
             .store(in: &bag)
     }

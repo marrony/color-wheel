@@ -14,7 +14,7 @@ final class HueMapperTests: XCTestCase {
             (180, 210),  // cyan ≈ blue-green
             (240, 240),  // blue
             (300, 300),  // magenta → violet
-            (360, 360),
+            (360, 0),     // 360 degrees wraps to 0 degrees on the wheel
         ]
         for (rgb, expected) in cases {
             XCTAssertEqual(HueMapper.rgbToArtist(rgb), expected, accuracy: 1e-9,
@@ -30,7 +30,7 @@ final class HueMapperTests: XCTestCase {
             (210, 180),
             (240, 240),
             (300, 300),
-            (360, 360),
+            (360, 0),    // 360 degrees maps back to 0 degrees
         ]
         for (artist, expected) in cases {
             XCTAssertEqual(HueMapper.artistToRgb(artist), expected, accuracy: 1e-9,
@@ -39,10 +39,14 @@ final class HueMapperTests: XCTestCase {
     }
 
     func testRoundTripAtSampledHues() {
-        for hue in stride(from: 0.0, through: 360.0, by: 15.0) {
+        // Iterate up to, but not including, 360.0, as 0.0 covers the wrap-around.
+        for hue in stride(from: 0.0, through: 360.0 - 1e-9, by: 15.0) {
             let round = HueMapper.artistToRgb(HueMapper.rgbToArtist(hue))
             XCTAssertEqual(round, hue, accuracy: 1e-9, "hue=\(hue)")
         }
+        // Explicitly test the 360/0 boundary case
+        let roundAt360 = HueMapper.artistToRgb(HueMapper.rgbToArtist(360.0))
+        XCTAssertEqual(roundAt360, 0.0, accuracy: 1e-9, "hue=360.0")
     }
 
     func testWrapsBelowZero() {
