@@ -59,7 +59,7 @@ expires after 7 days and you can only have ~3 free-signed apps per device.
 
 ```sh
 xcodebuild test -project ColorWheel.xcodeproj -scheme ColorWheel \
-  -destination 'platform=iOS Simulator,name=iPhone 15'
+  -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 The test target unit-tests the pure logic modules — `HarmonyEngineTests`,
