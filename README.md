@@ -23,8 +23,7 @@ complementary, triadic).
 
 - Xcode 15 or newer (full Xcode, not just Command Line Tools)
 - iOS 17+ device (the iOS simulator has no camera, so for actual sampling
-  you need a real iPhone — but the editor flow still works in the simulator
-  if you tap the empty "Detected" cell to start with white)
+  you need a real iPhone)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
 
 ## Generate the Xcode project
@@ -71,9 +70,10 @@ The test target unit-tests the pure logic modules — `HarmonyEngineTests`,
 ColorWheel/
 ├── ColorWheelApp.swift             # @main
 ├── ContentView.swift               # screen composition
-├── SavedState.swift                # persisted app state
+├── SavedState.swift                # persisted app state (sample color)
 ├── SettingsKeys.swift              # UserDefaults key constants
 ├── SettingsStore.swift             # Settings.app ↔ app sync
+└── ColorWheel.entitlements         # App Group capability
 ├── Info.plist                      # NSCameraUsageDescription, etc.
 ├── Settings.bundle/Root.plist      # iOS Settings.app entries
 ├── Assets.xcassets/                # app icons & colors
@@ -97,9 +97,34 @@ ColorWheelTests/
 ├── HarmonyEngineTests.swift
 ├── HueMapperTests.swift
 └── ColorSamplerTests.swift
+ColorWheel.entitlements             # App Group capability
 project.yml                         # XcodeGen project config
 scripts/generate_icon.swift         # icon generation script
 ```
+
+## App Group persistence
+
+The app uses an **App Group** (`group.neris.marrony.ColorWheel`) to share
+`UserDefaults` between the running app and **Settings.app**. This is required
+because Xcode's dev signing (Personal Team) reinstalls create a new per-install
+sandbox container, but Settings.app keeps writing to the original container.
+Without the App Group, the two ends silently diverge and settings changes
+in Settings.app don't reflect in the running app until a full delete-and-reinstall.
+
+Both sides use the same suite:
+- `Settings.bundle/Root.plist` declares the group via
+  `ApplicationGroupContainerIdentifier`
+- `SettingsStore` reads from `UserDefaults(suiteName: SettingsStore.appGroup)`
+- `SavedState` stores the sampled color in the same group suite
+
+Keys: `wheel_model` (String), `slice_count` (Int), `savedState` (JSON blob).
+
+## Camera permissions
+
+- `NSCameraUsageDescription` in `Info.plist`
+- Requests `.video` authorization on launch
+- **Denied/restricted** → static "open Settings" view (no camera access)
+- **No back camera** (simulator) → static placeholder, Sample disabled
 
 ## Design decisions
 
@@ -244,7 +269,7 @@ matches each line style to its harmony type. The Hue slider's value is
 in **wheel-degree space** so it matches the marker's visible angle.
 
 When no color has been sampled, the empty "Detected" cell is still
-tappable and seeds the editor with `HSB.white` — useful for designing a
+tappable and seeds the editor with red — useful for designing a
 palette without a camera or for testing in the simulator.
 
 ### Settings.bundle backed by an App Group
